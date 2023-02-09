@@ -42,7 +42,8 @@ app.get("/customers/:id", async (req, res) => {
       `SELECT * FROM customers WHERE id=$1;`,
       [id]
     );
-    res.send(customer.rows[0]);
+    if (!customer.rows[0]) return res.sendStatus(404)
+    res.status(200).send(customer.rows[0]);
   } catch (error) {
     res.send(error);
   }

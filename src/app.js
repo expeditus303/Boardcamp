@@ -66,6 +66,8 @@ app.post("/customers", async (req, res) => {
   }
 
   try {
+    const customerExists = await connection.query('SELECT * FROM customers WHERE cpf=$1', [cpf])
+    if (customerExists.rows[0]) return res.sendStatus(409)
     await connection.query(
       "INSERT INTO customers (name, phone, cpf, birthday) VALUES ($1, $2, $3, $4)",
       [name, phone, cpf, birthday]

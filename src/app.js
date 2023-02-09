@@ -1,5 +1,6 @@
-import express from "express";
 import dotenv from "dotenv";
+import express from "express";
+import joi from "joi";
 import pkg from "pg";
 
 dotenv.config();
@@ -34,7 +35,7 @@ app.get("/customers", async (req, res) => {
 app.get("/customers/:id", async (req, res) => {
   const { id } = req.params;
 
-  if (isNaN(id)) return res.sendStatus(400)
+  if (isNaN(id)) return res.sendStatus(400);
 
   try {
     const customer = await connection.query(
@@ -48,16 +49,40 @@ app.get("/customers/:id", async (req, res) => {
 });
 
 app.post("/customers", async (req, res) => {
-
   const { name, phone, cpf, birthday } = req.body;
+
+  const newCustomerSchema = joi.object({
+    name: joi.string().min(3).required(),
+    phone: joi.string().pattern(/^\d+$/).min(10).max(11).required(),
+    cpf: joi.string().pattern(/^\d+$/).length(11).required(),
+    birthday: joi.date().required(),
+  });
+
+  const { error } = newCustomerSchema.validate(req.body, {abortEarly: false});
+
+  if (error) {
+    const errorMessage = error.details.map((err) => err.message);
+    return res.status(422).send(errorMessage);
+  }
 
   try {
     await connection.query(
       "INSERT INTO customers (name, phone, cpf, birthday) VALUES ($1, $2, $3, $4)",
       [name, phone, cpf, birthday]
     );
-    res.sendStatus(201)
+    res.sendStatus(201);
   } catch (error) {
-    res.send(error)
+    res.send(error);
   }
+});
+
+app.post("/games", async (req, res) => {
+  const { name, image, stockTotal, pricePerDay } = req.body;
+
+  try {
+    await connection.query(
+      "INSERT INTO games (name, image, stockTotal, pricePerDay) VALUES ($1, $2, $3, $4)"
+    );
+    res.sendStatus(201);
+  } catch (error) {}
 });

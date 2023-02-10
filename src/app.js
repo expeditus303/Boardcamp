@@ -23,6 +23,17 @@ const connection = new Pool({
   database: "boardcamp",
 });
 
+app.get("/games", async (req, res) => {
+
+  try {
+    const games = await connection.query('SELECT * FROM games')
+
+    res.status(201).send(games.rows)
+  } catch (error) {
+    res.status(500).send(error)
+  }
+})
+
 app.get("/customers", async (req, res) => {
   try {
     const customers = await connection.query("SELECT * FROM customers;");
@@ -85,14 +96,33 @@ app.post("/customers", async (req, res) => {
 app.post("/games", async (req, res) => {
   const { name, image, stockTotal, pricePerDay } = req.body;
 
-  
+  const gamesSchema = joi.object({
+    name: joi.string().min(1).required(),
+    image: joi.string().min(3).required(),
+    stockTotal: joi.number().min(1).required(),
+    pricePerDay: joi.number().min(1).required()
+  })
+
+  const { error } = gamesSchema.validate(req.body, { abortEarly: false })
+
+  if (error) {
+    const errorMessage = error.details.map((err) => err.message);
+    return res.status(400).send(errorMessage);
+  }
 
   try {
+
+    const gameExist = await connection.query('SELECT * FROM games WHERE name=$1', [name])
+
+    if (gameExist.rows[0]) return res.sendStatus(409)
+
     await connection.query(
-      "INSERT INTO games (name, image, stockTotal, pricePerDay) VALUES ($1, $2, $3, $4)"
+      'INSERT INTO games (name, image, "stockTotal", "pricePerDay") VALUES ($1, $2, $3, $4)', [name, image, stockTotal, pricePerDay]
     );
     res.sendStatus(201);
-  } catch (error) {}
+  } catch (error) {
+    res.status(500).send(error)
+  }
 });
 
 app.put("/customers/:id", async (req, res) => {

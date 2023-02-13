@@ -59,7 +59,7 @@ export async function insertRental(req, res) {
 
     res.sendStatus(201);
   } catch (error) {
-    res.status(500).send(error.message);
+    res.status(505).send(error.message);
   }
 }
 
@@ -91,8 +91,8 @@ export async function endRental(req, res) {
     }
 
     await connection.query(
-      `UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3;`,
-      [new Date(), delayFee, id]
+      `UPDATE rentals SET "returnDate"=NOW(), "delayFee"=$1 WHERE id=$2;`,
+      [delayFee, id]
     );
 
     await connection.query(

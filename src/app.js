@@ -38,7 +38,7 @@ app.post("/rentals", async (req, res) => {
   const rentalsSchema = joi.object({
     customerId: joi.number().min(1).integer().required(),
     gameId: joi.number().min(1).integer().required(),
-    daysRented: joi.number().min(1).integer().required()
+    daysRented: joi.number().min(1).integer().required(),
   });
 
   const { error } = rentalsSchema.validate(req.body, { abortEarly: false });
@@ -49,6 +49,7 @@ app.post("/rentals", async (req, res) => {
   }
 
   const date = dayjs().format("DD-MM-YYYY");
+  // const date = "01-02-2023"
 
   try {
     const customerExists = await connection.query(
@@ -65,29 +66,50 @@ app.post("/rentals", async (req, res) => {
 
     if (!gameExists.rows[0]) return res.sendStatus(400);
 
-    console.log()
+    console.log();
 
-    if (gameExists.rows[0].stockTotal === 0) return res.status(400).send("Out of stock")
+    if (gameExists.rows[0].stockTotal === 0)
+      return res.status(400).send("Out of stock");
 
-    const pricePerDay = gameExists.rows[0].pricePerDay
+    const pricePerDay = gameExists.rows[0].pricePerDay;
 
-    const originalPrice = pricePerDay * daysRented
+    const originalPrice = pricePerDay * daysRented;
 
     await connection.query(
       'INSERT INTO rentals ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") VALUES ($1, $2, $3, $4, $5, $6, $7);',
       [customerId, gameId, date, daysRented, null, originalPrice, null]
     );
 
-    await connection.query('UPDATE games SET "stockTotal" = "stockTotal" - 1 WHERE id=$1;', [gameId])
+    await connection.query(
+      'UPDATE games SET "stockTotal" = "stockTotal" - 1 WHERE id=$1;',
+      [gameId]
+    );
 
-    res.send(gameExists.rows[0]);
-  } catch (error) {}
+    res.sendStatus(201);
+  } catch (error) {
+    res.sendStatus(500);
+  }
 });
 
 app.get("/rentals", async (req, res) => {
   try {
+    const rentals = await connection.query(
+      `SELECT
+      rentals.*,
+      json_build_object('id', customers.id, 'name', customers.name) AS customer,
+      json_build_object('id', games.id, 'name', games.name) AS game
+    FROM
+      rentals
+      JOIN customers ON rentals."customerId" = customers.id
+      JOIN games ON rentals."gameId" = games.id;`
+    );
 
-  } catch (error) {}
+    console.log(rentals.rows)
+
+    res.send(rentals.rows);
+  } catch (error) {
+    res.send(error)
+  }
 });
 
 app.get("/games", async (req, res) => {
@@ -233,3 +255,29 @@ app.put("/customers/:id", async (req, res) => {
     res.sendStatus(500);
   }
 });
+
+app.post("/rentals/:id/return", async (req, res) => {
+  const { id } = req.params
+
+  const date = dayjs().format("YYYY-MM-DD");
+
+  try {
+    
+    // await connection.query('UPDATE rentals SET "returnDate" = $1 WHERE id=$2', [date, id])
+
+    await connection.query(`UPDATE rentals
+    SET "returnDate" = $1 ,
+        "delayFee" = 
+          CASE 
+            WHEN $1::date  > ("rentDate" + INTERVAL '1 day' * "daysRented") THEN ($1::date  - ("rentDate" + INTERVAL '1 day' * "daysRented")) * "originalPrice" / "daysRented"
+            ELSE NULL
+          END
+    WHERE ID=$2;
+    `, [date, id])
+
+    res.sendStatus(200)
+  } catch (error) {
+    console.log(error)
+    res.sendStatus(500)
+  }
+})

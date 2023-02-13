@@ -24,14 +24,16 @@ export async function insertGame(req, res) {
 export async function getGames(req, res) {
   const { offset, limit } = req.query
   try {
-    const games = 
-    offset && limit 
-      ? await connection.query("SELECT * FROM games LIMIT $1 OFFSET $2", [limit, offset])
-      : offset 
-      ? await connection.query("SELECT * FROM games OFFSET $1", [offset])
-      : limit 
-      ? await connection.query("SELECT * FROM games LIMIT $1", [limit]) 
-      : await connection.query("SELECT * FROM games")
+
+    let games;
+    
+    if (offset) games = await connection.query("SELECT * FROM games OFFSET $1", [offset])
+
+    if (limit) games = await connection.query("SELECT * FROM games LIMIT $1", [limit])
+
+    if (offset && limit) games = await connection.query("SELECT * FROM games LIMIT $1 OFFSET $2", [limit, offset])
+    
+    if (!offset && !limit) games = await connection.query("SELECT * FROM games;")
 
     res.status(201).send(games.rows);
   } catch (error) {

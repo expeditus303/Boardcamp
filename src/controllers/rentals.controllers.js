@@ -91,9 +91,14 @@ export async function endRental(req, res) {
     }
 
     await connection.query(
-      `UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$1;`,
+      `UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$3;`,
       [new Date(), delayFee, id]
     );
+
+    await connection.query(
+        'UPDATE games SET "stockTotal" = "stockTotal" + 1 WHERE id=$1;',
+        [rent.gameId]
+      );
 
     res.sendStatus(200);
   } catch (error) {
@@ -108,11 +113,11 @@ export async function deleteRental(req, res) {
   try {
     const idExists = await connection.query('SELECT * FROM rentals WHERE id=$1', [id])
 
-    if (idExists.rowCount === 0) return res.sendStatus(405)
+    if (idExists.rowCount === 0) return res.sendStatus(404)
 
-    const notReturned = idExists.rows[0];
+    const gameNotReturned = idExists.rows[0];
 
-    if (!notReturned.returnDate) return res.sendStatus(400)
+    if (!gameNotReturned.returnDate) return res.sendStatus(400)
 
     await connection.query(`DELETE FROM rentals WHERE id=$1`, [id])
 

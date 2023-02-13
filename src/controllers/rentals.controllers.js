@@ -39,7 +39,7 @@ export async function insertRental(req, res) {
     if (gameExists.rowCount === 0) return res.sendStatus(400);
 
     if (gameExists.rows[0].stockTotal === 0)
-      return res.status(400).send("Out of stock");
+      return res.sendStatus(400);
 
     const pricePerDay = gameExists.rows[0].pricePerDay;
 
@@ -57,7 +57,7 @@ export async function insertRental(req, res) {
 
     res.sendStatus(201);
   } catch (error) {
-    res.status(505).send(error.message);
+    res.status(500).send(error.message);
   }
 }
 

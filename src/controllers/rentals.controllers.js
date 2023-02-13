@@ -66,32 +66,59 @@ export async function insertRental(req, res) {
 export async function endRental(req, res) {
   const { id } = req.params;
 
-  const date = dayjs()
+  const date = dayjs();
 
   try {
-    
-    const rentExists = await connection.query('SELECT * FROM rentals WHERE id=$1;', [id])
+    const rentExists = await connection.query(
+      "SELECT * FROM rentals WHERE id=$1;",
+      [id]
+    );
 
-    const rent = rentExists.rows[0]
+    const rent = rentExists.rows[0];
 
-    if (rentExists.rowCount === 0) return res.sendStatus(404)
-    if (rent.returnDate) return res.sendStatus(400)
+    if (rentExists.rowCount === 0) return res.sendStatus(404);
+    if (rent.returnDate) return res.sendStatus(400);
 
-    const diff = date.valueOf() - rent.rentDate.valueOf()
-    const diffDays = Math.floor(diff / (24 * 3600 * 1000))
+    const diff = date.valueOf() - rent.rentDate.valueOf();
+    const diffDays = Math.floor(diff / (24 * 3600 * 1000));
 
-    console.log(diffDays)
+    console.log(diffDays);
 
-    let delayFee = 0
+    let delayFee = 0;
     if (diffDays > rent.daysRented) {
-        delayFee = (diffDays - rent.daysRented) * (rent.originalPrice / rent.daysRented)
+      delayFee =
+        (diffDays - rent.daysRented) * (rent.originalPrice / rent.daysRented);
     }
 
-    await connection.query(`UPDATE rentals SET "returnDate"=$1, "delayFee"=$2;`, [new Date(), delayFee])
+    await connection.query(
+      `UPDATE rentals SET "returnDate"=$1, "delayFee"=$2 WHERE id=$1;`,
+      [new Date(), delayFee, id]
+    );
 
     res.sendStatus(200);
   } catch (error) {
     console.log(error);
+    res.status(500).send(error.message);
+  }
+}
+
+export async function deleteRental(req, res) {
+  const { id } = req.params;
+
+  try {
+    const idExists = await connection.query('SELECT * FROM rentals WHERE id=$1', [id])
+
+    if (idExists.rowCount === 0) return res.sendStatus(405)
+
+    const notReturned = idExists.rows[0];
+
+    if (!notReturned.returnDate) return res.sendStatus(400)
+
+    await connection.query(`DELETE FROM rentals WHERE id=$1`, [id])
+
+    res.sendStatus(200)
+
+  } catch (error) {
     res.status(500).send(error.message);
   }
 }

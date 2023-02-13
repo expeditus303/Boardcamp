@@ -43,7 +43,7 @@ export async function insertRental(req, res) {
       [gameId]
     );
 
-    if (games.rows.length > gameExists.rows[0].stockTotal)
+    if (games.rows.length >= gameExists.rows[0].stockTotal)
       return res.sendStatus(400);
 
     const pricePerDay = gameExists.rows[0].pricePerDay;

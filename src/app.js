@@ -149,7 +149,7 @@ app.post("/customers", async (req, res) => {
 
   if (error) {
     const errorMessage = error.details.map((err) => err.message);
-    return res.status(422).send(errorMessage);
+    return res.status(400).send(errorMessage);
   }
 
   try {
@@ -227,8 +227,8 @@ app.put("/customers/:id", async (req, res) => {
 
   try {
     const cpfExists = await connection.query(
-      "SELECT * FROM customers WHERE cpf=$1",
-      [cpf]
+      "SELECT * FROM customers WHERE cpf=$1 AND id <> $2",
+      [cpf, id]
     );
 
     if (cpfExists.rows[0]) return res.sendStatus(409);

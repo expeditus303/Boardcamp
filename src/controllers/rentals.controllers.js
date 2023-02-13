@@ -38,7 +38,12 @@ export async function insertRental(req, res) {
 
     if (gameExists.rowCount === 0) return res.sendStatus(400);
 
-    if (gameExists.rows[0].stockTotal === 0)
+    const games = await connection.query(
+      'SELECT * FROM rentals WHERE "gameId"=$1;',
+      [gameId]
+    );
+
+    if (games.rows.length > gameExists.rows[0].stockTotal)
       return res.sendStatus(400);
 
     const pricePerDay = gameExists.rows[0].pricePerDay;
@@ -48,11 +53,6 @@ export async function insertRental(req, res) {
     await connection.query(
       'INSERT INTO rentals ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") VALUES ($1, $2, $3, $4, $5, $6, $7);',
       [customerId, gameId, new Date(), daysRented, null, originalPrice, null]
-    );
-
-    await connection.query(
-      'UPDATE games SET "stockTotal" = "stockTotal" - 1 WHERE id=$1;',
-      [gameId]
     );
 
     res.sendStatus(201);
@@ -94,9 +94,9 @@ export async function endRental(req, res) {
     );
 
     await connection.query(
-        'UPDATE games SET "stockTotal" = "stockTotal" + 1 WHERE id=$1;',
-        [rent.gameId]
-      );
+      'UPDATE games SET "stockTotal" = "stockTotal" + 1 WHERE id=$1;',
+      [rent.gameId]
+    );
 
     res.sendStatus(200);
   } catch (error) {
@@ -109,18 +109,20 @@ export async function deleteRental(req, res) {
   const { id } = req.params;
 
   try {
-    const idExists = await connection.query('SELECT * FROM rentals WHERE id=$1', [id])
+    const idExists = await connection.query(
+      "SELECT * FROM rentals WHERE id=$1",
+      [id]
+    );
 
-    if (idExists.rowCount === 0) return res.sendStatus(404)
+    if (idExists.rowCount === 0) return res.sendStatus(404);
 
     const gameNotReturned = idExists.rows[0];
 
-    if (!gameNotReturned.returnDate) return res.sendStatus(400)
+    if (!gameNotReturned.returnDate) return res.sendStatus(400);
 
-    await connection.query(`DELETE FROM rentals WHERE id=$1`, [id])
+    await connection.query(`DELETE FROM rentals WHERE id=$1`, [id]);
 
-    res.sendStatus(200)
-
+    res.sendStatus(200);
   } catch (error) {
     res.status(500).send(error.message);
   }

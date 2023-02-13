@@ -16,20 +16,8 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => console.log(`Server listening on PORT ${PORT}`));
 
-console.log(
-  process.env.HOST,
-  process.env.POSTGRES_PORT,
-  process.env.USER_,
-  process.env.PASSWORD,
-  process.env.DATABASE
-);
-
 const connection = new Pool({
-  host: process.env.HOST,
-  port: process.env.POSTGRES_PORT,
-  user: process.env.USER_,
-  password: process.env.PASSWORD,
-  database: process.env.DATABASE,
+  connectionString: process.env.DATABASE_URL,
 });
 
 app.post("/rentals", async (req, res) => {
@@ -104,11 +92,11 @@ app.get("/rentals", async (req, res) => {
       JOIN games ON rentals."gameId" = games.id;`
     );
 
-    console.log(rentals.rows)
+    console.log(rentals.rows);
 
     res.send(rentals.rows);
   } catch (error) {
-    res.send(error)
+    res.send(error);
   }
 });
 
@@ -257,15 +245,15 @@ app.put("/customers/:id", async (req, res) => {
 });
 
 app.post("/rentals/:id/return", async (req, res) => {
-  const { id } = req.params
+  const { id } = req.params;
 
   const date = dayjs().format("YYYY-MM-DD");
 
   try {
-    
     // await connection.query('UPDATE rentals SET "returnDate" = $1 WHERE id=$2', [date, id])
 
-    await connection.query(`UPDATE rentals
+    await connection.query(
+      `UPDATE rentals
     SET "returnDate" = $1 ,
         "delayFee" = 
           CASE 
@@ -273,11 +261,13 @@ app.post("/rentals/:id/return", async (req, res) => {
             ELSE NULL
           END
     WHERE ID=$2;
-    `, [date, id])
+    `,
+      [date, id]
+    );
 
-    res.sendStatus(200)
+    res.sendStatus(200);
   } catch (error) {
-    console.log(error)
-    res.sendStatus(500)
+    console.log(error);
+    res.sendStatus(500);
   }
-})
+});

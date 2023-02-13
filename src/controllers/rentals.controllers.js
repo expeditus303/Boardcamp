@@ -2,6 +2,7 @@ import { connection } from "../database/database.connection.js";
 import dayjs from "dayjs";
 
 export async function getRentals(req, res) {
+
   try {
     const rentals = await connection.query(
       `SELECT

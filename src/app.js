@@ -1,24 +1,25 @@
 import dotenv from "dotenv";
 import express from "express";
 import joi from "joi";
-import pkg from "pg";
 import dayjs from "dayjs";
+import cors from "cors"
 
 dotenv.config();
 
-const { Pool } = pkg;
-
 const app = express();
-
-app.use(express.json());
+app.use(express.json())
+app.use(cors())
 
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => console.log(`Server listening on PORT ${PORT}`));
 
-const connection = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+
+
+
+
+
+
+
 
 app.post("/rentals", async (req, res) => {
   const { customerId, gameId, daysRented } = req.body;
@@ -171,19 +172,6 @@ app.post("/customers", async (req, res) => {
 app.post("/games", async (req, res) => {
   const { name, image, stockTotal, pricePerDay } = req.body;
 
-  const gamesSchema = joi.object({
-    name: joi.string().min(1).required(),
-    image: joi.string().min(3).required(),
-    stockTotal: joi.number().min(1).integer().required(),
-    pricePerDay: joi.number().min(1).integer().required(),
-  });
-
-  const { error } = gamesSchema.validate(req.body, { abortEarly: false });
-
-  if (error) {
-    const errorMessage = error.details.map((err) => err.message);
-    return res.status(400).send(errorMessage);
-  }
 
   try {
     const gameExist = await connection.query(
@@ -191,7 +179,7 @@ app.post("/games", async (req, res) => {
       [name]
     );
 
-    if (gameExist.rows[0]) return res.sendStatus(409);
+    if (gameExist.rowCount !== 0) return res.sendStatus(409);
 
     await connection.query(
       'INSERT INTO games (name, image, "stockTotal", "pricePerDay") VALUES ($1, $2, $3, $4)',

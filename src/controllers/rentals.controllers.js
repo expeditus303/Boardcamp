@@ -23,8 +23,6 @@ export async function getRentals(req, res) {
 export async function insertRental(req, res) {
   const { customerId, gameId, daysRented } = req.body;
 
-  const date = dayjs().format("DD-MM-YYYY");
-
   try {
     const customerExists = await connection.query(
       "SELECT * FROM customers WHERE id=$1;",
@@ -49,7 +47,7 @@ export async function insertRental(req, res) {
 
     await connection.query(
       'INSERT INTO rentals ("customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") VALUES ($1, $2, $3, $4, $5, $6, $7);',
-      [customerId, gameId, date, daysRented, null, originalPrice, null]
+      [customerId, gameId, new Date(), daysRented, null, originalPrice, null]
     );
 
     await connection.query(

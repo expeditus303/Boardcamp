@@ -22,10 +22,13 @@ export async function insertGame(req, res) {
 }
 
 export async function getGames(req, res) {
-  const { offset, limit } = req.query
+  const { offset, limit, name } = req.query
+  console.log(name)
   try {
 
-    const games = await connection.query("SELECT * FROM games LIMIT $1 OFFSET $2", [limit, offset])
+    let games = await connection.query("SELECT * FROM games LIMIT $1 OFFSET $2", [limit, offset])
+
+    if (name) games = await connection.query(`SELECT * FROM games WHERE name ILIKE $1::text || '%' LIMIT $2 OFFSET $3`, [name, limit, offset])
 
     res.status(201).send(games.rows);
   } catch (error) {

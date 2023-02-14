@@ -27,15 +27,7 @@ export async function getCustomers(req, res) {
 
   try {
 
-    let customers;
-
-    if (offset) customers = await connection.query("SELECT * FROM customers OFFSET $1", [offset])
-
-    if (limit) customers = await connection.query("SELECT * FROM customers LIMIT $1", [limit])
-
-    if (offset && limit) customers = await connection.query("SELECT * FROM customers LIMIT $1 OFFSET $2", [limit, offset])
-    
-    if (!offset && !limit) customers = await connection.query("SELECT * FROM customers;")
+    const customers = await connection.query("SELECT * FROM customers LIMIT $1 OFFSET $2", [limit, offset])
 
     res.send(customers.rows);
   } catch (error) {

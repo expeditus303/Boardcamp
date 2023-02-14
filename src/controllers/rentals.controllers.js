@@ -2,6 +2,7 @@ import { connection } from "../database/database.connection.js";
 import dayjs from "dayjs";
 
 export async function getRentals(req, res) {
+  const { offset, limit } = req.query
 
   try {
     const rentals = await connection.query(
@@ -12,7 +13,7 @@ export async function getRentals(req, res) {
         FROM
           rentals
           JOIN customers ON rentals."customerId" = customers.id
-          JOIN games ON rentals."gameId" = games.id;`
+          JOIN games ON rentals."gameId" = games.id OFFSET $1 LIMIT $2;`, [offset, limit]
     );
 
     res.send(rentals.rows);

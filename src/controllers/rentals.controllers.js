@@ -2,10 +2,16 @@ import { connection } from "../database/database.connection.js";
 import dayjs from "dayjs";
 
 export async function getRentals(req, res) {
-  const { offset, limit } = req.query
+  const { offset, limit, customerId, order, desc, status, startDate } =
+    req.query;
+
+  let openOrClosed;
+  if (status === "open") openOrClosed = false;
+
+  if (status === "closed") openOrClosed = true;
 
   try {
-    const rentals = await connection.query(
+    let rentals = await connection.query(
       `SELECT
           rentals.*,
           json_build_object('id', customers.id, 'name', customers.name) AS customer,
@@ -13,8 +19,70 @@ export async function getRentals(req, res) {
         FROM
           rentals
           JOIN customers ON rentals."customerId" = customers.id
-          JOIN games ON rentals."gameId" = games.id OFFSET $1 LIMIT $2;`, [offset, limit]
+          JOIN games ON rentals."gameId" = games.id OFFSET $1 LIMIT $2;`,
+      [offset, limit]
     );
+
+    if (customerId)
+      rentals = await connection.query(
+        `
+    SELECT
+    rentals.*,
+    json_build_object('id', customers.id, 'name', customers.name) AS customer,
+    json_build_object('id', games.id, 'name', games.name) AS game
+  FROM
+    rentals
+    JOIN customers ON rentals."customerId" = customers.id
+    JOIN games ON rentals."gameId" = games.id WHERE rentals."customerId" = $1 OFFSET $2 LIMIT $3;`,
+        [customerId, offset, limit]
+      );
+
+    if (order)
+      rentals = await connection.query(
+        `
+        SELECT
+        rentals.*,
+        json_build_object('id', customers.id, 'name', customers.name) AS customer,
+        json_build_object('id', games.id, 'name', games.name) AS game
+      FROM
+        rentals
+        JOIN customers ON rentals."customerId" = customers.id
+        JOIN games ON rentals."gameId" = games.id ORDER BY ${order} ${
+          desc === "true" ? "DESC" : ""
+        }`
+      );
+
+    if (status)
+      rentals = await connection.query(
+        `
+      SELECT
+      rentals.*,
+      json_build_object('id', customers.id, 'name', customers.name) AS customer,
+      json_build_object('id', games.id, 'name', games.name) AS game
+      FROM
+      rentals
+      JOIN customers ON rentals."customerId" = customers.id
+      JOIN games ON rentals."gameId" = games.id WHERE rentals."returnDate" IS ${
+        openOrClosed ? "NOT" : ""
+      } NULL OFFSET $1 LIMIT $2;`,
+        [offset, limit]
+      );
+
+    if (startDate)
+      rentals = await connection.query(
+        `
+      SELECT
+      rentals.*,
+      json_build_object('id', customers.id, 'name', customers.name) AS customer,
+      json_build_object('id', games.id, 'name', games.name) AS game
+      FROM
+      rentals
+      JOIN customers ON rentals."customerId" = customers.id
+      JOIN games ON rentals."gameId" = games.id WHERE rentals."rentDate" >= $1 OFFSET $2 LIMIT $3;`,
+        [startDate, offset, limit]
+      );
+
+    // SELECT * FROM your_table WHERE rentDate > '2021-06-21';
 
     res.send(rentals.rows);
   } catch (error) {

@@ -23,13 +23,15 @@ export async function insertCustomer(req, res) {
 }
 
 export async function getCustomers(req, res) {
-  const { offset, limit, cpf } = req.query
+  const { offset, limit, cpf, order, desc } = req.query
 
   try {
 
     let customers = await connection.query("SELECT * FROM customers LIMIT $1 OFFSET $2", [limit, offset])
 
     if (cpf) customers = await connection.query(`SELECT * FROM customers WHERE cpf ILIKE $1::text || '%' LIMIT $2 OFFSET $3`, [cpf, limit, offset])
+
+    if (order) customers = await connection.query(`SELECT * FROM customers ORDER BY ${order} ${desc === 'true' ? 'DESC' : ''}`)
 
     res.send(customers.rows);
   } catch (error) {
